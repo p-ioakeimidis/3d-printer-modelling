@@ -36,7 +36,8 @@ The script will output timestamped discrete event triggers to the console and ge
 
 ## Simulation Results
 
-![Hybrid System Simulation Plots]<img width="4200" height="2700" alt="simulation_hybrid" src="https://github.com/user-attachments/assets/3e4707b9-6817-42ee-a60e-3d793a8eb0b4" />
+![Hybrid System Simulation Plots]
+<img width="4200" height="2700" alt="simulation_hybrid" src="https://github.com/user-attachments/assets/3e4707b9-6817-42ee-a60e-3d793a8eb0b4" />
 
 
 The generated output successfully demonstrates the complete hybrid cycle:
