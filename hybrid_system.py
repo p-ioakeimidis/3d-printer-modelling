@@ -6,14 +6,20 @@ from dataclasses import dataclass
 @dataclass
 class PrinterParams:
     """Parameters for the 3D Printer Hybrid System."""
-    # Mechanical & Motor Parameters (CoreXY)
-    r_m: float = 0.01   # Motor pulley radius (m)
-    J_eq: float = 0.1   # Equivalent inertia
-    b_x: float = 0.05   # Friction in x-direction
-    b_y: float = 0.05   # Friction in y-direction
-    K_m: float = 0.1    # Motor constant
-    L_m: float = 0.01   # Motor inductance (H)
-    R_m: float = 1.0    # Motor resistance (Ohms)
+    m = 0.5       #kg
+    J_m = 5e-6    #kgm^2 b
+    r_m = 0.006   #m
+    r_b = 0.006   #m  
+
+    ## Viscous friction coefficients (per bearing)
+    mu_r = 1e-6  #N m s/rad
+    mu_lx = 0.5  #N s/m
+    mu_ly = 0.5  #N s/m
+
+    # DC motor parameters
+    R_m = 2.0    #Ω
+    L_m = 0.002  #mH
+    K_m = 0.05   #N m/A
     
     # Thermal Parameters (Nozzle)
     C_tn: float = 50.0  # Thermal capacity of the nozzle (Joules/Celsius)
@@ -40,6 +46,10 @@ def f(x, u, q, p):
     dx_1 = theta_l_dot
     dx_2 = theta_r_dot
 
+    p.J_eq = p.J_m+p.m*p.p.r_m**2/2
+    
+    p.b_x = 4*p.mu_r/p.r_b**2 + 2*p.mu_lx
+    p.b_y = 2*p.mu_r/p.r_b**2 + 2*p.mu_ly
     dx_3 = -(p.r_m**2/(p.J_eq*4))*((p.b_x+p.b_y)*dx_1+(p.b_x-p.b_y)*dx_2)+(p.K_m*i_l)/p.J_eq
     dx_4 = -(p.r_m**2/(p.J_eq*4))*((p.b_x-p.b_y)*dx_1+(p.b_x+p.b_y)*dx_2)+(p.K_m*i_r)/p.J_eq
 
