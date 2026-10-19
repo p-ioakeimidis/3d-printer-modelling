@@ -234,7 +234,7 @@ ax1 = plt.subplot(2, 2, 1)
 ax1.plot(x_pos, y_pos, label="Tool Head Path", color="blue", lw=2)
 ax1.scatter([0], [0], color="red", s=60, zorder=5, label="Wipe Tower (0,0)")
 ax1.scatter([saved_x], [saved_y], color="green", s=60, zorder=5, label=f"Saved Pos ({saved_x:.2f}, {saved_y:.2f})")
-ax1.set_title("Cartesian Trajectory (Open-Loop)", fontsize=11, fontweight='bold')
+ax1.set_title("Cartesian Trajectory", fontsize=11, fontweight='bold')
 ax1.set_xlabel("X Position (m)"); ax1.set_ylabel("Y Position (m)")
 ax1.legend(); ax1.grid(True)
 
