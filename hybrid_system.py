@@ -47,7 +47,7 @@ def f(x, u, q, p):
     dx_2 = theta_r_dot
 
     p.J_eq = p.J_m+p.m*p.p.r_m**2/2
-    
+
     p.b_x = 4*p.mu_r/p.r_b**2 + 2*p.mu_lx
     p.b_y = 2*p.mu_r/p.r_b**2 + 2*p.mu_ly
     dx_3 = -(p.r_m**2/(p.J_eq*4))*((p.b_x+p.b_y)*dx_1+(p.b_x-p.b_y)*dx_2)+(p.K_m*i_l)/p.J_eq
@@ -126,10 +126,22 @@ def g_temp_high(t,x,u,q,p):
     return x[6] - TARGET_TEMPERATURE
 g_temp_high.terminal = True
 
+#here we used the saved location of the head the moment the printer stopped printing
+#and using the eucleidian eguation we compute the distance between the current location and saved location
+#when this distance reaches almost 0, then the head will be where it stopped pronted in the first place.
+
+def g_reached_saved(t,x,u,q,p):
+    pos_x = (p.r_m/2)*(x[0]+x[1])
+    pos_y= (p.r_m/2)*(x[0]-x[1])
+    saved_x = u[2]
+    saved_y = u[3]
+    return np.sqrt((pos_x-saved_x)**2 + (pos_y - saved_y)**2) - 0.001 
+g_reached_saved = True
 
 ###################################
 ##jumps##
 ###################################
+
 
 
 
