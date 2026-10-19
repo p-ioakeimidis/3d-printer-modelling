@@ -128,7 +128,7 @@ g_temp_high.terminal = True
 
 #here we used the saved location of the head the moment the printer stopped printing
 #and using the eucleidian eguation we compute the distance between the current location and saved location
-#when this distance reaches almost 0, then the head will be where it stopped pronted in the first place.
+#when this distance reaches almost 0, then the head will be where it stopped printed in the first place.
 
 def g_reached_saved(t,x,u,q,p):
     pos_x = (p.r_m/2)*(x[0]+x[1])
@@ -136,7 +136,7 @@ def g_reached_saved(t,x,u,q,p):
     saved_x = u[2]
     saved_y = u[3]
     return np.sqrt((pos_x-saved_x)**2 + (pos_y - saved_y)**2) - 0.001 
-g_reached_saved = True
+g_reached_saved.Terminal= True
 
 ###################################
 ##jumps##
