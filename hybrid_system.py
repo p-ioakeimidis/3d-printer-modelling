@@ -79,8 +79,8 @@ def f(t, x, u, q, p):
 ##guar###
 ##############
 
-#solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[7] position/distance and when the value is equal to MAX_FILAMENT, then this guard is triggered
-#the solver updates the value of x[7] in every step , actually x[7] is a discrete value , while dx_7 is a continiues one (dx/ dt)
+#solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[9] position/distance and when the value is equal to MAX_FILAMENT, then this guard is triggered
+#the solver updates the value of x[9] in every step
 def g_filament_finished(t, x, u, q, p):
     return x[9] - 5.0 # 
 g_filament_finished.terminal = True; g_filament_finished.direction = 1
@@ -206,16 +206,16 @@ while t_curr < t_end:
         if current_fsm == "q0": 
             current_fsm = "q1"
         elif current_fsm == "q2":
-            x_curr[2:6], x_curr[9] = 0.0, 0.0 # Reset motor speeds and odometer distance
+            x_curr[2:6], x_curr[9] = 0.0, 0.0 # Reset motor speeds and travalled distance of head tool 
             current_fsm = "q3"
         elif current_fsm == "q3":
-            x_curr[0], x_curr[1] = 0.0, 0.0   # reset to the  origin 
+            x_curr[0], x_curr[1] = 0.0, 0.0   # reset to the  origin  (0,0)
             x_curr[2:6] = 0.0
             current_fsm = "q4"
         elif current_fsm == "q4": 
             current_fsm = "q5"
         elif current_fsm == "q5":
-            x_curr[9] = 0.0 # reset odometer distance for new filament 
+            x_curr[9] = 0.0 # reset traveled distance for new filament 
             current_fsm = "q6"
         elif current_fsm == "q6": 
             current_fsm = "q7"
