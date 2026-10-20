@@ -76,7 +76,7 @@ def f(t, x, u, q, p):
     return np.array([dx_1, dx_2, dx_3, dx_4, dx_5, dx_6, dx_7, dx_8, dx_9, dx_10])
 
 ##############
-##guar###
+##guards###
 ##############
 
 #solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[9] position/distance and when the value is equal to MAX_FILAMENT, then this guard is triggered
