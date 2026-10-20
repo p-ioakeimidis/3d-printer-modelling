@@ -40,6 +40,6 @@ The script will output timestamped discrete event triggers to the console and ge
 
 
 The generated output successfully demonstrates the complete hybrid cycle:
-* **Cartesian Trajectory:** Shows the precise open-loop path tracking the tool head from the origin, stopping at the saved position (5.00, 0.00), reversing to the Wipe Tower, and returning to the saved position.
+* **Cartesian Trajectory:** Shows the precise path tracking the tool head from the origin, stopping at the saved position (5.00, 0.00), reversing to the Wipe Tower, and returning to the saved position.
 * **Nozzle Temperature:** Validates the cooling curve down to 30°C and the heating curve past 200°C.
 * **FSM Transitions:** Confirms the strict chronological progression of the 8 discrete modes (q0 through q7) against the master simulation clock.
