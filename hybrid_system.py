@@ -75,9 +75,9 @@ def f(t, x, u, q, p):
 
     return np.array([dx_1, dx_2, dx_3, dx_4, dx_5, dx_6, dx_7, dx_8, dx_9, dx_10])
 
-# ==========================================
-# 2. DISCRETE EVENT GUARDS
-# ==========================================
+##############
+##guar###
+##############
 
 #solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[7] position/distance and when the value is equal to MAX_FILAMENT, then this guard is triggered
 #the solver updates the value of x[7] in every step , actually x[7] is a discrete value , while dx_7 is a continiues one (dx/ dt)
@@ -159,27 +159,27 @@ while t_curr < t_end:
         q, active_events = 1, [g_filament_finished] # we only care for this guard , in order to move to the next state q1 
         
     elif current_fsm == "q2":
-        u_active = (-2.5, -2.5)  #reverse voltage back to (0,0) (as it initialy started at 0,0 before we gave voltage)
+        u_active = (-2.5, -2.5)  #reverse voltage back to (0,0) (as it initialy started at 0,0 before we had given voltage)
         q, active_events = 1, [g_reached_0_0]
         
     elif current_fsm == "q3":
-        u_active = (1.5, -1.5) # Wiggle movement at origin
+        u_active = (1.5, -1.5) # Wiggle movement at origin, so we sdo the wiping process.
         q, active_events = 1, [g_filament_wiped]
         
     elif current_fsm == "q4":
-        u_active = (0.0, 0.0) # Motors off, heater off
-        q, active_events = 0, [g_temp_low]
+        u_active = (0.0, 0.0) # we apply zero 0 volatge so motors are off
+        q, active_events = 0, [g_temp_low] # and heater is off
         
     elif current_fsm == "q5":
-        u_active = (0.0, 0.0, t_curr) # Motors off, pass entry time
+        u_active = (0.0, 0.0, t_curr) # we apply 0 volatge to motors and pass entry time
         q, active_events = 0, [g_loading_done]
         
     elif current_fsm == "q6":
-        u_active = (0.0, 0.0) # Motors off, heater on
+        u_active = (0.0, 0.0) # we apply zero volatge so motors and heater is on
         q, active_events = 1, [g_temp_high]
         
     elif current_fsm == "q7":
-        u_active = (2.5, 2.5, saved_x, saved_y) # constant positice voltage to go back to saved point
+        u_active = (2.5, 2.5, saved_x, saved_y) # constant positive voltage to go back to saved point
         q, active_events = 1, [g_reached_saved]
 
     # we call solver 
@@ -196,6 +196,11 @@ while t_curr < t_end:
     x_curr = sol.y[:, -1]
 
     #  jumps logic 
+
+    # here the logic is that from the simulation in the while loop , when an event is triggered starting from q0,  
+    # then the solver  has reached its target (ex. g_reaced_0_0.terminal = True) and then the integration stops 
+    #so the status of the solver at this exact moment is 1, 
+    #and then we jump to the next event and so on, until we hit the break and then the simulation ends.
     if sol.status == 1:
         print(f"[{t_curr:.2f}s] Event triggered. Leaving {current_fsm}")
         if current_fsm == "q0": 
@@ -204,13 +209,13 @@ while t_curr < t_end:
             x_curr[2:6], x_curr[9] = 0.0, 0.0 # Reset motor speeds and odometer distance
             current_fsm = "q3"
         elif current_fsm == "q3":
-            x_curr[0], x_curr[1] = 0.0, 0.0   # Align exact origin
+            x_curr[0], x_curr[1] = 0.0, 0.0   # reset to the  origin 
             x_curr[2:6] = 0.0
             current_fsm = "q4"
         elif current_fsm == "q4": 
             current_fsm = "q5"
         elif current_fsm == "q5":
-            x_curr[9] = 0.0 # Reset odometer distance for new filament s
+            x_curr[9] = 0.0 # reset odometer distance for new filament 
             current_fsm = "q6"
         elif current_fsm == "q6": 
             current_fsm = "q7"
