@@ -18,7 +18,7 @@ k = 0.13      # W/(m K)
 h_b = 100.0   # W/(m^2 K)
 h_c = 10.0    # W/(m^2 K)
 
-T_eq = (T_b, T_e, h_b, h_c, k, R_c)  #equilibrium temperatures [°C]
+T_eq = (h_b*T_b + 3*h_c*T_e) / (h_b + 3*h_c)  #equilibrium temperature [°C]
 
 dq = 2 * np.pi * R_c / N
 
@@ -104,4 +104,39 @@ plt.legend()
 plt.grid()
 plt.show(block=False)
 
+plt.show()
+
+
+# Combined figure: temperature distribution and temperature difference
+fig, ax = plt.subplots(1, 2, figsize=(13, 5))
+
+# Left: Temperature distribution
+ax[0].plot(q[:len(T_quarter)], T_quarter, label='25% printed')
+ax[0].plot(q[:len(T_half)], T_half, label='50% printed')
+ax[0].plot(q[:len(T_three_quarters)], T_three_quarters, label='75% printed')
+ax[0].plot(q, T_full, label='100% printed')
+ax[0].plot(q, sol.y[:, j], label='Nearly uniform')
+
+ax[0].set_title('Filament Temperature Distribution')
+ax[0].set_xlabel('Arc length q [m]')
+ax[0].set_ylabel('Temperature [°C]')
+ax[0].legend()
+ax[0].grid(True)
+
+# Right: Maximum-minimum temperature difference
+ax[1].plot(time_total, diff_total, label='Temperature difference')
+
+ax[1].axhline(1.0, color='r', linestyle='--',
+              label='Uniformity threshold = 1.0 °C')
+
+ax[1].axvline(t_print, color='k', linestyle='--',
+              label='Printing completed')
+
+ax[1].set_title('Temperature Difference')
+ax[1].set_xlabel('Time [s]')
+ax[1].set_ylabel('Max - Min Temperature [°C]')
+ax[1].legend()
+ax[1].grid(True)
+
+plt.tight_layout()
 plt.show()
