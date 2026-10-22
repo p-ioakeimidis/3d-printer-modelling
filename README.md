@@ -3,14 +3,14 @@
 Python simulations of a CoreXY 3D printer, developed as part of a physical modeling project.
 
 ## Q1.4
-Motion Dynamics and Trajectory Simulation
+# Motion Dynamics and Trajectory Simulation
 Modeling of the mechanical and electrical dynamics of a CoreXY printer driven by two motors, based on two decoupled x- and y-axis state-space descriptions. Input motor voltages are designed to generate elliptical and Lissajous trajectories. 
 ![Elliptical Trajectory Simulation and Input](ellipse_combined.png)
 
 ![Lissajous Curve Trajectory Simulation and Input](lissajous_combined.png)
 
 ## Q1.6
-Filament Thermal Simulation
+# Filament Thermal Simulation
 Modeling of temperature evolution of a filament being deposited along a circular path, using a 1D heat equation. The model accounts for heat conduction between filament segments, heat exchange with the heated print bed and convection with ambient air. A finite-difference discretization and numerical ODE integration are used to simulate the deposition and cooling of filament, until a nearly uniform temperature is reached.
 ![Filament Temperature Simulation](thermal_combined.png)
 
