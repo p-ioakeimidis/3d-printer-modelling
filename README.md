@@ -21,18 +21,39 @@ This repository contains a Python-based simulation for a 3D printer modeled as a
 
 ## System Architecture
 
-The simulation is driven by a 10-dimensional continuous vector field and bounded by discrete event guards using `scipy.integrate.solve_ivp`.
+The simulation combines a 10-dimensional continuous model with a finite state machine. It uses `scipy.integrate.solve_ivp` to integrate the dynamics and detect events that trigger mode transitions and state resets.
 
-* **Continuous Dynamics (10D State Space):** Models DC motor positions, velocities, and currents, alongside the nozzle's RLC circuit, thermal temperature, and an integrated odometer to track filament usage and spatial displacement.
-* Finite State Machine:
-  * **`q0`**: head is moving moving forward.
-  * **`q1`**: save the current X and Y coordinates.
-  * **`q2`**: head returning to the wipe tower at the origin.
-  * **`q3`**: Scrubbing and wiping sequence at the origin.
-  * **`q4`**: Thermal cooling phase targeting a safe threshold of 30°C.
-  * **`q5`**: 5-second filament loading delay.
-  * **`q6`**: Thermal heating phase targeting an operational threshold of 200°C.
-  * **`q7`**: return to the saved X and Y print coordinates.
+### Continuous Dynamics
+
+The state vector contains:
+
+- Two motor angles.
+- Two motor angular velocities.
+- Two motor currents.
+- Nozzle inductor current and capacitor voltage.
+- Nozzle temperature.
+- An odometer measuring accumulated printing or wiping path length.
+
+The saved print coordinates and loading timer are managed separately.
+
+### Finite State Machine
+
+| State | Operation |
+|-------|-----------|
+| `q0` | **Printing:** Moves back and forth along the x-axis using equal cosine motor voltages. The Replacement of filament starts when the printing distance reaches 5 m or a colour change is requested. |
+| `q1` | **Save position:** Instantly stores the current x and y coordinates. |
+| `q2` | **Move to origin:** Travels to the wipe-tower location at (0, 0). |
+| `q3` | **Wiping:** Performs a 0.10 m wiping stroke starting near the origin. |
+| `q4` | **Cooling:** Switches off the input voltage of the nozzle and waits until the temperature of nozzle reaches 30°C. |
+| `q5` | **Loading:** Waits 10 seconds for filament loading while the nozzle continues cooling. |
+| `q6` | **Heating:** Applies 14.2 V to the nozzle until the the temperature of the nozzle reaches 235°C. |
+| `q7` | **Return:** Moves back to within 1 mm of the saved printing position. |
+
+Both replacement triggers follow the same sequence:
+
+`q0 → q1 → q2 → q3 → q4 → q5 → q6 → q7`
+
+The model allows printing to resume through `q7 → q0`. The single-cycle demonstration stops after the return.
 
 ## Dependencies
 
@@ -52,13 +73,11 @@ python3 hybrid_system.py
 The script will output timestamped discrete event triggers to the console and generate a comprehensive `matplotlib` figure containing the trajectory and state data.
 
 ## Simulation Results
-The below plot is the result of filament replacement simulation triggered by filament exhaustion 
+Below is the result of filament replacement simulation triggered by filament exhaustion 
+
 ![Hybrid System Simulation Plots](filament_exhaustion.png)
 
-The below plot is the result of filament replacement simulation triggered by colour-change
+Below is the result of filament replacement simulation triggered by colour-change
+
 ![Hybrid System Simulation Plots](colour_change.png)
 
-The generated output successfully demonstrates the complete hybrid cycle:
-* **Cartesian Trajectory:** Shows the precise path tracking the tool head from the origin, stopping at the saved position (5.00, 0.00), reversing to the Wipe Tower, and returning to the saved position.
-* **Nozzle Temperature:** Validates the cooling curve down to 30°C and the heating curve past 200°C.
-* **FSM Transitions:** Confirms the strict chronological progression of the 8 discrete modes (q0 through q7) against the master simulation clock.
