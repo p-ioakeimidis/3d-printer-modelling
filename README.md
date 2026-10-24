@@ -2,20 +2,19 @@
 
 Python simulations of a CoreXY 3D printer, developed as part of a physical modeling project.
 
-## Q1.4
-# Motion Dynamics and Trajectory Simulation
+
+# Q1.4 - Motion Dynamics and Trajectory Simulation
 Modeling of the mechanical and electrical dynamics of a CoreXY printer driven by two motors, based on two decoupled x- and y-axis state-space descriptions. Input motor voltages are designed to generate elliptical and Lissajous trajectories. 
 ![Elliptical Trajectory Simulation and Input](ellipse_combined.png)
 
 ![Lissajous Curve Trajectory Simulation and Input](lissajous_combined.png)
 
-## Q1.6
-# Filament Thermal Simulation
+# Q1.6 - Filament Thermal Simulation
 Modeling of temperature evolution of a filament being deposited along a circular path, using a 1D heat equation. The model accounts for heat conduction between filament segments, heat exchange with the heated print bed and convection with ambient air. A finite-difference discretization and numerical ODE integration are used to simulate the deposition and cooling of filament, until a nearly uniform temperature is reached.
 ![Filament Temperature Simulation](thermal_combined.png)
 
 
-# 3D Printer Hybrid System Simulation
+# Q3.1 - 3D Printer Hybrid System Simulation
 
 This repository contains a Python-based simulation for a 3D printer modeled as a hybrid automaton. The project integrates continuous physical dynamics with discrete supervisory logic to accurately model mechanical motion, electrical circuits, and thermal properties during a print interruption and recovery cycle.
 
@@ -49,7 +48,7 @@ The saved print coordinates and loading timer are managed separately.
 | `q6` | **Heating:** Applies 14.2 V to the nozzle until the the temperature of the nozzle reaches 235°C. |
 | `q7` | **Return:** Moves back to within 1 mm of the saved printing position. |
 
-Both replacement triggers follow the same sequence:
+Both replacement triggers follow the same sequence :
 
 `q0 → q1 → q2 → q3 → q4 → q5 → q6 → q7`
 
@@ -79,3 +78,6 @@ Below is the result of filament replacement simulation triggered by colour-chang
 
 ![Hybrid System Simulation Plots](colour_change.png)
 
+# Q3.2 - Draw a square 
+The printed square is shown below :
+![Hybrid System sqaure](perfect_square.png)
