@@ -70,8 +70,6 @@ Execute the main simulation script from the terminal:
 python3 hybrid_system.py
 ```
 
-The script will output timestamped discrete event triggers to the console and generate a comprehensive `matplotlib` figure containing the trajectory and state data.
-
 ## Simulation Results
 Below is the result of filament replacement simulation triggered by filament exhaustion 
 
