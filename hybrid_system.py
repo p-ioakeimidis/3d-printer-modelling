@@ -28,23 +28,47 @@ class PrinterParams:
     C_tn: float = 50.0   # Thermal capacity of the nozzle (Joules/Celsius)
     R_tn: float = 1.1    # Thermal resistance to environment (Celsius/Watt)
     R_n: float = 1.0     # Electrical resistance of the nozzle heater (Ohms)
-    T_e: float = 20.0    #  Environment temperature (Celsius)
-    u_h: float = 15.0    # Heater voltage applied when ON (Volts)
-    
+    T_e: float = 25.0    #  Environment temperature (Celsius)
+    T_print: float = 235.0  #operating/high-temperature threshold (degree)
+    T_low: float = 30.0     # cooling threshold (degree)
+    u_h: float = 14.2    # Heater voltage applied when ON (Volts)
+
+    #hybrid-system event thresholds 
+    print_distance: float = 5.0       # the available length of filament that can be printed  (meters)
+    wipe_distance: float = 0.10     # the assumed length of filament that it is need to be printed to execute the wipe process(meters)
+    position_tol: float = 0.001       # the targeted position of the head (meters)
+    loading_time: float = 10.0         # the assumed loading time of the filament
+
+    # motor input voltages for the simulation
+    u_print: float = 0.3         # cosine input for back-and-forth printing (volts)
+    print_period: float = 12.0       # seconcs
+    u_move: float = 0.2             #constant input for moving and wiping (volts)
+
 ###physical modelling###
-def f(t, x, u, q, p):
+def f(t, x, mode, p):
     theta_l = x[0] 
     theta_r = x[1]
     dx_1 = x[2] # Motor velocities
     dx_2 = x[3] # Motor velocities
     i_l = x[4]# Motor currents
     i_r= x[5]   # Motor currents
-    i_L = x[6]
-    u_C = x[7]
-    T_n =  x[8] # Nozzle RLC & thermal states
+    i_L = x[6] # Nozzle L 
+    u_C = x[7] # Nozzle C
+    T_n =  x[8] # Nozzle thermal state
 
-    u_l, u_r = u[0], u[1]
-    u_n = p.u_h if q == 1 else 0.0 
+    if mode == "q0" :
+        u_l  = u_r = p.u_print * np.cos(2.0 * np.pi * t / p.print_period)
+    elif mode == "q2":
+        u_l  = u_r = -p.u_move
+    elif mode =="q3":
+        u_l = u_r = p.u_move
+    elif mode == "q7":
+        u_l = u_r = direction * p.u_move 
+    else:
+        u_l = u_r = 0.0
+
+    u_n = 0.0 if mode in ("q4","q5") else p.u_h # when u_n is 0 , the nozzle input voltage is 0
+    
 
     # Dynamic mechanical parameters
     p.J_eq = p.J_m + p.m * p.r_m**2 / 2.0
@@ -68,75 +92,93 @@ def f(t, x, u, q, p):
     v_x = (p.r_m / 2.0) * (dx_1 + dx_2)
     v_y = (p.r_m / 2.0) * (dx_1 - dx_2)
     
-    if q == 1 and (abs(u_l) > 0 or abs(u_r) > 0):
+    if mode in ("q0","q3") :
         dx_10 = np.sqrt(v_x**2 + v_y**2)
     else:
         dx_10 = 0.0
 
     return np.array([dx_1, dx_2, dx_3, dx_4, dx_5, dx_6, dx_7, dx_8, dx_9, dx_10])
 
+#helper function
+#Convert motor angles to Cartesian toolhead position.#
+def get_xy(x, p):
+    pos_x = (p.r_m / 2.0) * (x[0] + x[1])
+    pos_y = (p.r_m / 2.0) * (x[0] - x[1])
+    return pos_x, pos_y
+
+
 ##############
 ##guards###
 ##############
 
-#solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[9] position/distance and when the value is equal to MAX_FILAMENT, then this guard is triggered
+#solve_ivp integrates dx_7 (velocity) starting from 0.0 , we take x[9] position/distance and when the value is equal to p.print_distance, then this guard is triggered
 #the solver updates the value of x[9] in every step
-def g_filament_finished(t, x, u, q, p):
-    return x[9] - 5.0 # 
-g_filament_finished.terminal = True; g_filament_finished.direction = 1
+
+def g_filament_finished(t, x, mode, p):
+    return x[9] - p.print_distance# 
+g_filament_finished.terminal = True
+g_filament_finished.direction = 1
+
+def g_colour_change (t, x, mode, p):
+    return t - colour_change_time
+g_colour_change.terminal = True
+g_colour_change.direction = 1 
+
 
 ## trigger when the cartesian position to the origin is 0
-def g_reached_0_0(t, x, u, q, p):
-    pos_x = (p.r_m / 2.0) * (x[0] + x[1])
-    pos_y = (p.r_m / 2.0) * (x[0] - x[1])
-    return np.sqrt(pos_x**2 + pos_y**2) - 0.001
-g_reached_0_0.terminal = True; g_reached_0_0.direction = -1
+def g_reached_0_0(t, x, mode, p):
+    pos_x, pos_y = get_xy(x, p)
+    return np.sqrt(pos_x**2 + pos_y**2) - p.position_tol
+g_reached_0_0.terminal = True
+g_reached_0_0.direction = -1
 
 
 #here we measure the distance traveled by the nozzle , so that it can do the wiped-process (to clean itsself from old filament)
 #so again x[9] has the total traveled distance of the nozzle 
-#when this distance reaches WIPED_THRESHOLD, then this guard is triggered
-def g_filament_wiped(t, x, u, q, p):
-    return x[9] - 0.05 # Traveled 5 cm of scrub distance
-g_filament_wiped.terminal = True; g_filament_wiped.direction = 1
+#when this distance reaches p.wipe_distance, then this guard is triggered
+def g_filament_wiped(t, x, mode, p):
+    return x[9] - p.wipe_distance 
+g_filament_wiped.terminal = True
+g_filament_wiped.direction = 1
 
 
-def g_temp_low(t, x, u, q, p):
-    return x[8] - 30.0 # Cooled down to 30°C
-g_temp_low.terminal = True; g_temp_low.direction = -1
+def g_temp_low(t, x, mode, p):
+    return x[8] - p.T_low# Cooled down to 30°C
+g_temp_low.terminal = True
+g_temp_low.direction = -1
 
 
-#last_state_t is the exact timestamp the temp_low state finished
-#t is the the master clock of the simulation, in solve_ivp
-# when we enter in q5 we capture the current time (t_curr)
-def g_loading_done(t, x, u, q, p):
-    entry_time = u[2]
-    return t - (entry_time + 5.0) # 5s loading timer
-g_loading_done.terminal = True; g_loading_done.direction = 1
+def g_loading_done(t, x, mode, p):
+    return t - (entry_time + p.loading_time) # 5s loading timer
+g_loading_done.terminal = True
+g_loading_done.direction = 1
 
-def g_temp_high(t, x, u, q, p):
-    return x[8] - 200.0 # Heated up and above  200°C
-g_temp_high.terminal = True; g_temp_high.direction = 1
+def g_temp_high(t, x, mode, p):
+    return x[8] - p.T_print # Heated up and above  235°C
+g_temp_high.terminal = True
+g_temp_high.direction = 1
 
 
 #here we used the saved location of the head the moment the printer stopped printing
 #and using the eucleidian eguation we compute the distance between the current location and saved location
-#when this distance reaches almost 0, then the head will be where it stopped printed in the first place.
-
-
-def g_reached_saved(t, x, u, q, p):
-    pos_x = (p.r_m / 2.0) * (x[0] + x[1])
-    pos_y = (p.r_m / 2.0) * (x[0] - x[1])
-    saved_x, saved_y = u[2], u[3]
-    return np.sqrt((pos_x - saved_x)**2 + (pos_y - saved_y)**2) - 0.001
-g_reached_saved.terminal = True; g_reached_saved.direction = -1
+#when this distance reaches almost 0, then the head will be positioned it stopped printed in the first place.
+def g_reached_saved(t, x, mode, p):
+    pos_x, pos_y = get_xy(x, p)
+    return np.sqrt((pos_x - saved_x)**2 + (pos_y - saved_y)**2) - p.position_tol
+g_reached_saved.terminal = True
+g_reached_saved.direction = -1
 
 
 p = PrinterParams()
-t_curr, t_end = 0.0, 300.0
-x_curr = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, p.T_e, 0.0]) # initial values for the state space parameters 
+t_curr, t_end = 0.0, 1000.0
+theta_l0 = 0.145 / p.r_m
+theta_r0 = 0.145 / p.r_m
+direction  = 1.0
+x_curr = np.array([theta_l0, theta_r0, 0.0, 0.0,0.0, 0.0, p.u_h / p.R_n, p.u_h, p.T_print, 0.0], dtype=float) # initial values for the state space parameters 
 current_fsm = "q0"
-
+entry_time = 0.0
+colour_change_time = 250.0
+colour_change_pending = True
 saved_x, saved_y = 0.0, 0.0
 ts_log, ys_log, state_log = [], [], []
 
@@ -147,44 +189,42 @@ while t_curr < t_end:
     
     # Instantaneous Jump for Saving Location (q1)
     if current_fsm == "q1":
-        saved_x = (p.r_m / 2.0) * (x_curr[0] + x_curr[1])
-        saved_y = (p.r_m / 2.0) * (x_curr[0] - x_curr[1])
-        print(f"[{t_curr:.2f}s] q1: Saved location ({saved_x:.3f}, {saved_y:.3f})")
+        saved_x, saved_y = get_xy(x_curr, p)
+        print(f"saved position {saved_x:.2f},{saved_y:.2f}")
         current_fsm = "q2"
         continue
 
    
     if current_fsm == "q0": # we assume that the printer is printing 
-        u_active = (2.5, 2.5)  # moving diagonally
-        q, active_events = 1, [g_filament_finished] # we only care for this guard , in order to move to the next state q1 
-        
+        if colour_change_pending:
+            event =[g_filament_finished,g_colour_change]
+        else :  
+            event = g_filament_finished
+
     elif current_fsm == "q2":
-        u_active = (-2.5, -2.5)  #reverse voltage back to (0,0) (as it initialy started at 0,0 before we had given voltage)
-        q, active_events = 1, [g_reached_0_0]
-        
+        event = g_reached_0_0
+
     elif current_fsm == "q3":
-        u_active = (1.5, -1.5) # Wiggle movement at origin, so we sdo the wiping process.
-        q, active_events = 1, [g_filament_wiped]
+        event = g_filament_wiped
         
     elif current_fsm == "q4":
-        u_active = (0.0, 0.0) # we apply zero 0 volatge so motors are off
-        q, active_events = 0, [g_temp_low] # and heater is off
-        
+        event = g_temp_low
     elif current_fsm == "q5":
-        u_active = (0.0, 0.0, t_curr) # we apply 0 volatge to motors and pass entry time
-        q, active_events = 0, [g_loading_done]
-        
+        entry_time = t_curr
+        event = g_loading_done
     elif current_fsm == "q6":
-        u_active = (0.0, 0.0) # we apply zero volatge so motors and heater is on
-        q, active_events = 1, [g_temp_high]
-        
+        event = g_temp_high
     elif current_fsm == "q7":
-        u_active = (2.5, 2.5, saved_x, saved_y) # constant positive voltage to go back to saved point
-        q, active_events = 1, [g_reached_saved]
+        event = g_reached_saved
 
     # we call solver 
-    sol = solve_ivp(f, (t_curr, t_end), x_curr, args=(u_active, q, p),
-                    events=active_events, dense_output=True, max_step=0.05)
+    sol = solve_ivp(
+        f,
+        (t_curr, t_end),
+        x_curr,
+        args=(current_fsm, p),
+        events=event
+    )
 
     ts_log.append(sol.t)
     ys_log.append(sol.y)
@@ -201,64 +241,70 @@ while t_curr < t_end:
     # then the solver  has reached its target (ex. g_reaced_0_0.terminal = True) and then the integration stops 
     #so the status of the solver at this exact moment is 1, 
     #and then we jump to the next event and so on, until we hit the break and then the simulation ends.
+    # Jumps logic 
     if sol.status == 1:
         print(f"[{t_curr:.2f}s] Event triggered. Leaving {current_fsm}")
-        if current_fsm == "q0": 
+        
+        if current_fsm == "q0":
+            if colour_change_pending:
+                if len(sol.t_events[1]) > 0 :
+                    colour_change_pending = False 
+                    print(f"New colour requested")
             current_fsm = "q1"
+            
         elif current_fsm == "q2":
-            x_curr[2:6], x_curr[9] = 0.0, 0.0 # Reset motor speeds and travalled distance of head tool 
+            x_curr[2:6] = 0.0     # R(q2, q3) we zero out motor velocities and currents
+            x_curr[9] = 0.0       # we reset odometer distance
             current_fsm = "q3"
+            
         elif current_fsm == "q3":
-            x_curr[0], x_curr[1] = 0.0, 0.0   # reset to the  origin  (0,0)
-            x_curr[2:6] = 0.0
+            x_curr[2:6] = 0.0     # we zero out motor velocities and currents
             current_fsm = "q4"
-        elif current_fsm == "q4": 
+            
+        elif current_fsm == "q4":
             current_fsm = "q5"
+            
         elif current_fsm == "q5":
-            x_curr[9] = 0.0 # reset traveled distance for new filament 
+            x_curr[9] = 0.0       # R(q5, q6) we reset odometer distance for the new filament
             current_fsm = "q6"
-        elif current_fsm == "q6": 
+            
+        elif current_fsm == "q6":
+            pos_x, pos_y = get_xy(x_curr, p)
+            direction = 1.0 if saved_x >= pos_x else -1.0 # complemetary line of code  to do a 2 - cycle simulation
             current_fsm = "q7"
+
+            
         elif current_fsm == "q7":
-            x_curr[2:6] = 0.0
+            x_curr[2:6] = 0.0     # R(q7, q0) we zero out motor velocities and currents upon arrival
             print(f"[{t_curr:.2f}s] Cycle Complete! Returned to ({saved_x:.3f}, {saved_y:.3f}).")
             break
 
+
+### Process and plot results ###
 t_total = np.concatenate(ts_log)
 y_total = np.concatenate(ys_log, axis=1)
-state_total = np.array(state_log)
+x_pos, y_pos = get_xy(y_total, p)
 
-x_pos = (p.r_m / 2.0) * (y_total[0, :] + y_total[1, :])
-y_pos = (p.r_m / 2.0) * (y_total[0, :] - y_total[1, :])
-temp_tot = y_total[8, :]
+plt.figure(figsize=(10, 8))
 
-fig = plt.figure(figsize=(14, 9))
+plt.subplot(3, 1, 1)
+plt.plot(t_total, x_pos, label="movement in x")
+plt.plot(t_total, y_pos, label="movement in y")
+plt.ylabel("Position (m)")
+plt.legend()
+plt.grid()
 
-# Plot 1: Cartesian Trajectory
-ax1 = plt.subplot(2, 2, 1)
-ax1.plot(x_pos, y_pos, label="Tool Head Path", color="blue", lw=2)
-ax1.scatter([0], [0], color="red", s=60, zorder=5, label="Wipe Tower (0,0)")
-ax1.scatter([saved_x], [saved_y], color="green", s=60, zorder=5, label=f"Saved Pos ({saved_x:.2f}, {saved_y:.2f})")
-ax1.set_title("Cartesian Trajectory", fontsize=11, fontweight='bold')
-ax1.set_xlabel("X Position (m)"); ax1.set_ylabel("Y Position (m)")
-ax1.legend(); ax1.grid(True)
+plt.subplot(3, 1, 2)
+plt.plot(t_total, y_total[8])
+plt.ylabel("Temperature (C)")
+plt.grid()
 
-# Plot 2: Nozzle Temperature
-ax2 = plt.subplot(2, 2, 2)
-ax2.plot(t_total, temp_tot, color="orange", linewidth=2.5)
-ax2.axhline(y=30, color='b', linestyle='--', alpha=0.5, label="heater off (30°C)")
-ax2.axhline(y=200, color='r', linestyle='--', alpha=0.5, label="heater on (200°C)")
-ax2.set_title("Nozzle Temperature", fontsize=11, fontweight='bold')
-ax2.set_xlabel("Time (s)"); ax2.set_ylabel("Temperature (°C)")
-ax2.legend(); ax2.grid(True)
+plt.subplot(3, 1, 3)
+plt.step(t_total, state_log, where="post")
+plt.yticks(range(8), [f"q{i}" for i in range(8)])
+plt.ylabel("State")
+plt.xlabel("Time (s)")
+plt.grid()
 
-# Plot 3: Discrete State Timeline
-ax3 = plt.subplot(2, 1, 2)
-ax3.step(t_total, state_total, where='post', color='purple', linewidth=2.5)
-ax3.set_yticks(range(8))
-ax3.set_yticklabels([f"q{i}" for i in range(8)])
-ax3.set_title("Hybrid Automaton State Transitions vs Time", fontsize=11, fontweight='bold')
-ax3.set_xlabel("Time (s)"); ax3.set_ylabel("Active Discrete Mode")
-ax3.grid(True, linestyle=':', alpha=0.7)
 plt.tight_layout()
 plt.show()
