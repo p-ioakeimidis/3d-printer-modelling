@@ -52,9 +52,11 @@ python3 hybrid_system.py
 The script will output timestamped discrete event triggers to the console and generate a comprehensive `matplotlib` figure containing the trajectory and state data.
 
 ## Simulation Results
+The below plot is the result of filament replacement simulation triggered by filament exhaustion 
+![Hybrid System Simulation Plots](filament_exhaustion.png)
 
-![Hybrid System Simulation Plots](simulation_hybrid.png)
-
+The below plot is the result of filament replacement simulation triggered by colour-change
+![Hybrid System Simulation Plots](colour_change.png)
 
 The generated output successfully demonstrates the complete hybrid cycle:
 * **Cartesian Trajectory:** Shows the precise path tracking the tool head from the origin, stopping at the saved position (5.00, 0.00), reversing to the Wipe Tower, and returning to the saved position.
