@@ -186,7 +186,7 @@ plt.grid()
 
 plt.subplot(1, 2, 2)
 plt.step(t_total, state_log, where="post")
-plt.yticks([0, 1, 2, 3], ["Right", "Up", "Left", "Down"])
+plt.yticks([0, 1, 2, 3], ["corner 0 (Right)", "corner 1 (Up)", "corner 2 (Left)", "corner 3 (Down)"])
 plt.xlabel("Time (s)")
 plt.ylabel("Printing phase")
 plt.title("Square-side sequence")
