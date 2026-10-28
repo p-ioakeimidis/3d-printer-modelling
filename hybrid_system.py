@@ -29,9 +29,9 @@ class PrinterParams:
     R_tn: float = 1.1    # Thermal resistance to environment (Celsius/Watt)
     R_n: float = 1.0     # Electrical resistance of the nozzle heater (Ohms)
     T_e: float = 25.0    #  Environment temperature (Celsius)
-    T_print: float = 235.0  #operating/high-temperature threshold (degree)
+    T_high: float = 235.0  #operating/high-temperature threshold (degree)
     T_low: float = 30.0     # cooling threshold (degree)
-    u_h: float = 14.2    # Heater voltage applied when ON (Volts)
+    u_h: float = 14.2    # nozzle input voltage voltage applied 
 
     #hybrid-system event thresholds 
     print_distance: float = 5.0       # the available length of filament that can be printed  (meters)
@@ -154,7 +154,7 @@ g_loading_done.terminal = True
 g_loading_done.direction = 1
 
 def g_temp_high(t, x, mode, p):
-    return x[8] - p.T_print # Heated up and above  235°C
+    return x[8] - p.T_high # Heated up and above  235°C
 g_temp_high.terminal = True
 g_temp_high.direction = 1
 
@@ -174,7 +174,7 @@ t_curr, t_end = 0.0, 1000.0
 theta_l0 = 0.145 / p.r_m
 theta_r0 = 0.145 / p.r_m
 direction  = 1.0
-x_curr = np.array([theta_l0, theta_r0, 0.0, 0.0,0.0, 0.0, p.u_h / p.R_n, p.u_h, p.T_print, 0.0], dtype=float) # initial values for the state space parameters 
+x_curr = np.array([theta_l0, theta_r0, 0.0, 0.0,0.0, 0.0, p.u_h / p.R_n, p.u_h, p.T_high, 0.0], dtype=float) # initial values for the state space parameters 
 current_fsm = "q0"
 entry_time = 0.0
 colour_change_time = 250.0
