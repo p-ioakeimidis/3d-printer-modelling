@@ -78,4 +78,4 @@ Below is the result of filament replacement simulation triggered by colour-chang
 
 ## Q3.2 - Draw a square 
 The printed square is shown below :
-![Hybrid System sqaure](perfect_square.png)
+![Hybrid System sqaure](square.png)
