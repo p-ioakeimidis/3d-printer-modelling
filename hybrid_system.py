@@ -88,7 +88,7 @@ def f(t, x, mode, p):
     dx_8 = (1.0 / p.C_n) * (i_L - u_C / p.R_n)
     dx_9 = (1.0 / p.C_tn) * ((u_C**2 / p.R_n) - (T_n - p.T_e) / p.R_tn)
 
-    # Cartesian Velocities & Odometer Integration (dx_10)
+    # Cartesian Velocities & accumulated path length (dx_10)
     v_x = (p.r_m / 2.0) * (dx_1 + dx_2)
     v_y = (p.r_m / 2.0) * (dx_1 - dx_2)
     
@@ -100,7 +100,7 @@ def f(t, x, mode, p):
     return np.array([dx_1, dx_2, dx_3, dx_4, dx_5, dx_6, dx_7, dx_8, dx_9, dx_10])
 
 #helper function
-#Convert motor angles to Cartesian toolhead position.#
+#Convert motor angles to Cartesian toolhead position
 def get_xy(x, p):
     pos_x = (p.r_m / 2.0) * (x[0] + x[1])
     pos_y = (p.r_m / 2.0) * (x[0] - x[1])
