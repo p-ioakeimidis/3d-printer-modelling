@@ -29,7 +29,7 @@ The state vector contains:
 - Two motor currents.
 - Nozzle inductor current and capacitor voltage.
 - Nozzle temperature.
-- An odometer measuring accumulated printing or wiping path length.
+- Accumulated printing or wiping path length.
 
 The saved print coordinates and loading timer are managed separately.
 
